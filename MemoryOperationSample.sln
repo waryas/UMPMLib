@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27004.2002
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MemoryOperationSample", "MemoryOperationSample\MemoryOperationSample.vcxproj", "{68DB5666-C323-4D77-AE31-26F4805AB4AB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{68DB5666-C323-4D77-AE31-26F4805AB4AB}.Debug|x64.ActiveCfg = Debug|x64
+		{68DB5666-C323-4D77-AE31-26F4805AB4AB}.Debug|x64.Build.0 = Debug|x64
+		{68DB5666-C323-4D77-AE31-26F4805AB4AB}.Debug|x86.ActiveCfg = Debug|Win32
+		{68DB5666-C323-4D77-AE31-26F4805AB4AB}.Debug|x86.Build.0 = Debug|Win32
+		{68DB5666-C323-4D77-AE31-26F4805AB4AB}.Release|x64.ActiveCfg = Release|x64
+		{68DB5666-C323-4D77-AE31-26F4805AB4AB}.Release|x64.Build.0 = Release|x64
+		{68DB5666-C323-4D77-AE31-26F4805AB4AB}.Release|x86.ActiveCfg = Release|Win32
+		{68DB5666-C323-4D77-AE31-26F4805AB4AB}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {180B7CD0-21E9-43C1-80FD-6F9D004773C9}
+	EndGlobalSection
+EndGlobal
