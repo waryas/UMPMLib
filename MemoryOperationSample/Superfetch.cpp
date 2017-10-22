@@ -1,6 +1,7 @@
 #include "Superfetch.h"
 #include "SuperfetchNative.h"
 #include <Windows.h>
+#include <memory>
 
 PCHAR Priorities[8] =
 {
@@ -73,6 +74,35 @@ ULONG MmFileCount;
 ULONG MmPfnDatabaseSize;
 HANDLE PfiFileInfoHandle;
 PPF_MEMORY_RANGE_INFO MemoryRanges;
+
+template<typename SYS_TYPE>
+std::unique_ptr<SYS_TYPE>
+QueryInfo(
+	__in SYSTEM_INFORMATION_CLASS sysClass
+)
+{
+	size_t size = sizeof(RTL_PROCESS_MODULES) + SPAGE_SIZE;
+	NTSTATUS status = STATUS_INFO_LENGTH_MISMATCH;
+	void* info = malloc(size);
+	if (!info)
+		return std::unique_ptr<SYS_TYPE>(nullptr);
+
+	for (; STATUS_INFO_LENGTH_MISMATCH == status; size *= 2)
+	{
+		status = NtQuerySystemInformation(
+			(SYSTEM_INFORMATION_CLASS)sysClass,
+			info,
+			size,
+			nullptr);
+
+		info = realloc(info, size * 2);
+		if (!info)
+			break;
+	}
+
+	std::unique_ptr<SYS_TYPE> r_info = std::unique_ptr<SYS_TYPE>(static_cast<SYS_TYPE*>(info));
+	return r_info;
+}
 
 void PfiBuildSuperfetchInfo(IN PSUPERFETCH_INFORMATION SuperfetchInfo, IN PVOID Buffer, IN ULONG Length, IN SUPERFETCH_INFORMATION_CLASS InfoClass) {
 	SuperfetchInfo->Version = SUPERFETCH_VERSION;
@@ -148,4 +178,47 @@ bool SFGetMemoryInfo(SFMemoryInfo* pInfo, int& rCount)
 		rCount++;
 	}
 	return true;
+}
+
+uint64_t SFGetNtBase()
+{
+	auto module_info = QueryInfo<RTL_PROCESS_MODULES>(SystemModuleInformation);
+
+	if (module_info.get() && module_info->NumberOfModules)
+		return reinterpret_cast<size_t>(module_info->Modules[0].ImageBase);
+	return 0;
+}
+
+uint64_t SFGetWin32kBase()
+{
+	return SFGetModuleBase("win32k.sys");
+}
+
+uint64_t SFGetHalBase()
+{
+	return SFGetModuleBase("hal.sys");
+}
+
+uint64_t SFGetModuleBase(char* module)
+{
+	auto module_info = QueryInfo<RTL_PROCESS_MODULES>(SystemModuleInformation);
+
+	for (size_t i = 0; i < module_info->NumberOfModules; i++)
+		if (!strnicmp(module, module_info.get()->Modules[i].FullPathName + module_info->Modules[i].OffsetToFileName, strlen(module)+1))
+			return reinterpret_cast<size_t>(module_info->Modules[i].ImageBase);
+
+	return 0;
+}
+
+uint64_t SFGetEProcess(int pid)
+{
+	auto handle_info = QueryInfo<SYSTEM_HANDLE_INFORMATION>(SystemHandleInformation);
+	if (!handle_info.get())
+		return 0;
+
+	for (size_t i = 0; i < handle_info->HandleCount; i++)
+		if (pid == handle_info->Handles[i].ProcessId && 7 == handle_info->Handles[i].ObjectTypeNumber)
+			return reinterpret_cast<size_t>(handle_info->Handles[i].Object);
+
+	return 0;
 }

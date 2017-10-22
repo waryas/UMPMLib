@@ -357,6 +357,42 @@ typedef struct _SYSTEM_BASIC_INFORMATION {
 	CCHAR NumberOfProcessors;
 } SYSTEM_BASIC_INFORMATION, *PSYSTEM_BASIC_INFORMATION;
 
+struct RTL_PROCESS_MODULE_INFORMATION
+{
+	unsigned int Section;
+	void* MappedBase;
+	void* ImageBase;
+	unsigned int ImageSize;
+	unsigned int Flags;
+	unsigned short LoadOrderIndex;
+	unsigned short InitOrderIndex;
+	unsigned short LoadCount;
+	unsigned short OffsetToFileName;
+	char FullPathName[256];
+};
+
+struct RTL_PROCESS_MODULES
+{
+	unsigned int NumberOfModules;
+	RTL_PROCESS_MODULE_INFORMATION Modules[0];
+};
+
+struct SYSTEM_HANDLE
+{
+	ULONG ProcessId;
+	BYTE ObjectTypeNumber;
+	BYTE Flags;
+	USHORT Handle;
+	PVOID Object;
+	ACCESS_MASK GrantedAccess;
+};
+
+struct SYSTEM_HANDLE_INFORMATION
+{
+	ULONG HandleCount;
+	SYSTEM_HANDLE Handles[0];
+};
+
 extern "C" NTSTATUS WINAPI NtQuerySystemInformation(
 	IN SYSTEM_INFORMATION_CLASS SystemInformationClass,
 	OUT PVOID SystemInformation,
@@ -378,7 +414,7 @@ extern "C" NTSTATUS NTAPI RtlAdjustPrivilege(
 	OUT PBOOLEAN OldValue
 );
 
-
+#define SPAGE_SIZE              0x1000
 #define SUPERFETCH_VERSION      45
 #define SUPERFETCH_MAGIC        'kuhC'
 
