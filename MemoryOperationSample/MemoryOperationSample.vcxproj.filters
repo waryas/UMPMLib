@@ -41,5 +41,8 @@
     <ClInclude Include="Superfetch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SuperfetchNative.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,0 +1,12 @@
+
+*.ipch
+*.db
+.vs/MemoryOperationSample/v15/.suo
+*.opendb
+*.tlog
+*.obj
+*.log
+*.idb
+*.pdb
+*.ilk
+*.exe

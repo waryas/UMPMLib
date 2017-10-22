@@ -1,5 +1,5 @@
 #include "libPhysMem.h"
-
+#include "Superfetch.h"
 BOOLEAN MapPhysicalMemory(HANDLE hMemory, PDWORD64 pDwAddress, PSIZE_T pSize, PDWORD64 pDwVirtualAddress)
 {
 	NTSTATUS ntStatus;
@@ -22,10 +22,9 @@ BOOLEAN UnmapPhysicalMemory(PDWORD64 Address)
 		return false;
 }
 
-bool MapAllRam(HANDLE hMemory, void** outBuffer) {
+bool MapAllRam(HANDLE hMemory, void** outBuffer, uint64_t max) {
 	char* addr = 0;
-	auto toRead = 0xFFFFFFFFULL * 2; //Map 8GB of RAM
-	return MapPhysicalMemory(hMemory, (PDWORD64)&addr, &toRead, (PDWORD64)outBuffer);
+	return MapPhysicalMemory(hMemory, (PDWORD64)&addr, &max, (PDWORD64)outBuffer);
 }
 
 bool ReadPhysicalMemory(HANDLE hMemory, LPCVOID lpOffset, LPVOID lpBuffer, SIZE_T size, PSIZE_T read) {

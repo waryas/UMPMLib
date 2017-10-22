@@ -1,4 +1,6 @@
 #include "Superfetch.h"
+#include "SuperfetchNative.h"
+#include <Windows.h>
 
 PCHAR Priorities[8] =
 {
@@ -56,11 +58,6 @@ PCHAR ShortUseList[MMPFNUSE_KERNELSTACK + 1] =
 	"Kernel Stack"
 };
 
-#define SUPERFETCH_VERSION      45
-#define SUPERFETCH_MAGIC        'kuhC'
-
-#include <stdio.h>
-
 SIZE_T MmPageCounts[TransitionPage + 1];
 SIZE_T MmUseCounts[MMPFNUSE_KERNELSTACK + 1];
 SIZE_T MmPageUseCounts[MMPFNUSE_KERNELSTACK + 1][TransitionPage + 1];
@@ -77,7 +74,6 @@ ULONG MmPfnDatabaseSize;
 HANDLE PfiFileInfoHandle;
 PPF_MEMORY_RANGE_INFO MemoryRanges;
 
-
 void PfiBuildSuperfetchInfo(IN PSUPERFETCH_INFORMATION SuperfetchInfo, IN PVOID Buffer, IN ULONG Length, IN SUPERFETCH_INFORMATION_CLASS InfoClass) {
 	SuperfetchInfo->Version = SUPERFETCH_VERSION;
 	SuperfetchInfo->Magic = SUPERFETCH_MAGIC;
@@ -89,7 +85,7 @@ void PfiBuildSuperfetchInfo(IN PSUPERFETCH_INFORMATION SuperfetchInfo, IN PVOID 
 NTSTATUS PfiQueryMemoryRanges() {
 	NTSTATUS Status;
 	SUPERFETCH_INFORMATION SuperfetchInfo;
-	
+
 	ULONG ResultLength = 0;
 
 	PF_MEMORY_RANGE_INFO MemoryRangeInfo;
@@ -100,16 +96,14 @@ NTSTATUS PfiQueryMemoryRanges() {
 	Status = NtQuerySystemInformation(SystemSuperfetchInformation, &SuperfetchInfo, sizeof(SuperfetchInfo), &ResultLength);
 	if (Status == STATUS_BUFFER_TOO_SMALL) {
 
-		MemoryRanges = static_cast<PPF_MEMORY_RANGE_INFO>(::HeapAlloc(GetProcessHeap(), 0, ResultLength));
+		MemoryRanges = static_cast<PPF_MEMORY_RANGE_INFO>(HeapAlloc(GetProcessHeap(), 0, ResultLength));
 		MemoryRanges->Version = 1;
 
 		PfiBuildSuperfetchInfo(&SuperfetchInfo, MemoryRanges, ResultLength, SuperfetchMemoryRangesQuery);
 
 		Status = NtQuerySystemInformation(SystemSuperfetchInformation, &SuperfetchInfo, sizeof(SuperfetchInfo), &ResultLength);
-		if (!NT_SUCCESS(Status)) {
-			printf("Failure querying memory ranges!\n");
+		if (!NT_SUCCESS(Status))
 			return Status;
-		}
 	}
 	else {
 		MemoryRanges = &MemoryRangeInfo;
@@ -118,60 +112,40 @@ NTSTATUS PfiQueryMemoryRanges() {
 	return STATUS_SUCCESS;
 }
 
-void PfiDumpPfnRanges(VOID) {
-	PPHYSICAL_MEMORY_RUN Node;
-
-	for (ULONG i = 0; i < MemoryRanges->RangeCount; i++) {
-
-		Node = reinterpret_cast<PPHYSICAL_MEMORY_RUN>(&MemoryRanges->Ranges[i]);
-#ifdef _WIN64
-		printf("Physical Memory Range: %p to %p (%lld pages, %lld KB)\n",
-#else
-		printf("Physical Memory Range: %p to %p (%d pages, %d KB)\n",
-#endif
-			reinterpret_cast<void*>(Node->BasePage << PAGE_SHIFT),
-			reinterpret_cast<void*>((Node->BasePage + Node->PageCount) << PAGE_SHIFT),
-			Node->PageCount,
-			(Node->PageCount << PAGE_SHIFT) >> 10);
-		MmHighestPhysicalPage = max(MmHighestPhysicalPage, Node->BasePage + Node->PageCount);
-	}
-
-#ifdef _WIN64
-	printf("MmHighestPhysicalPage: %lld\n", MmHighestPhysicalPage);
-#else
-	printf("MmHighestPhysicalPage: %d\n", MmHighestPhysicalPage);
-#endif
-}
-
-bool SuperfetchSetup() {
+bool SFSetup()
+{
 	BOOLEAN old;
 	auto status = RtlAdjustPrivilege(SE_PROF_SINGLE_PROCESS_PRIVILEGE, TRUE, FALSE, &old);
 	status |= RtlAdjustPrivilege(SE_DEBUG_PRIVILEGE, TRUE, FALSE, &old);
-	if (!NT_SUCCESS(status)) {
-		printf("Failed to get required privileges.\n");
-		printf("Make sure that you are running with administrative privileges\n"
-			"and that your account has the Profile Process and Debug privileges\n");
+	if (!NT_SUCCESS(status))
 		return false;
-	}
 
 	SYSTEM_BASIC_INFORMATION basicInfo;
 
 	status = NtQuerySystemInformation(SystemBasicInformation,
 		&basicInfo, sizeof(SYSTEM_BASIC_INFORMATION), nullptr);
-	if (!NT_SUCCESS(status)) {
-		printf("Failed to get maximum physical page\n");
-		return 1;
-	}
+	if (!NT_SUCCESS(status)) 
+		return false;
 
-	//
-	// Remember the highest page
-	//
 	MmHighestPhysicalPageNumber = basicInfo.HighestPhysicalPageNumber;
 
 	return true;
-
 }
-void PrintPhysicalRange() {
-	PfiQueryMemoryRanges();
-	PfiDumpPfnRanges();
+
+bool SFGetMemoryInfo(SFMemoryInfo* pInfo, int& rCount)
+{
+	if (!NT_SUCCESS(PfiQueryMemoryRanges()))
+		return false;
+
+	rCount = 0;
+	PPHYSICAL_MEMORY_RUN Node;
+	for (ULONG i = 0; i < MemoryRanges->RangeCount; i++) {
+		Node = reinterpret_cast<PPHYSICAL_MEMORY_RUN>(&MemoryRanges->Ranges[i]);
+		pInfo[i].Start = Node->BasePage << PAGE_SHIFT;
+		pInfo[i].End = (Node->BasePage + Node->PageCount) << PAGE_SHIFT;
+		pInfo[i].PageCount = Node->PageCount;
+		pInfo[i].Size = ((Node->PageCount << PAGE_SHIFT) >> 10) * 1024; // kb to byte
+		rCount++;
+	}
+	return true;
 }
