@@ -1,7 +1,14 @@
-#pragma once
 #include <windows.h>
-
+#include <winternl.h>
+#include <AccCtrl.h>
+#include <Aclapi.h>
 #include <stdint.h>
+#include <stdio.h>
+
+//#include "ntdll.h"
+
+#define PHYSICAL_ADDRESS	LARGE_INTEGER
+
 typedef struct _POOL_HEADER
 {
 	union
@@ -84,3 +91,9 @@ typedef struct _OBJECT_HEADER
 	PVOID	SecurityDescriptor;
 	PVOID	Body;
 } OBJECT_HEADER, *POBJECT_HEADER;
+
+int isPrintable(uint32_t uint32);
+
+HANDLE OpenPhysicalMemory();
+BOOLEAN MapPhysicalMemory(HANDLE PhysicalMemory, PDWORD64 Address, PSIZE_T Length, PDWORD64 VirtualAddress);
+BOOLEAN UnmapPhysicalMemory(PDWORD64 Address);

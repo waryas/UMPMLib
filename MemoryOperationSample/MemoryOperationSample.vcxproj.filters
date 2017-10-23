@@ -18,30 +18,24 @@
     <ClCompile Include="MemoryOperationSample.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="libPhysMem.cpp">
+    <ClCompile Include="Superfetch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Superfetch.cpp">
+    <ClCompile Include="PhysicalMemory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="libPhysMem.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ntdll.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MemoryOperationSample.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="kernelstruct.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Superfetch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SuperfetchNative.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PMemHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PhysicalMemory.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

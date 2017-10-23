@@ -143,15 +143,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="libPhysMem.cpp" />
     <ClCompile Include="MemoryOperationSample.cpp" />
+    <ClCompile Include="PhysicalMemory.cpp" />
     <ClCompile Include="Superfetch.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="kernelstruct.h" />
-    <ClInclude Include="libPhysMem.h" />
-    <ClInclude Include="MemoryOperationSample.h" />
-    <ClInclude Include="ntdll.h" />
+    <ClInclude Include="PhysicalMemory.h" />
+    <ClInclude Include="PMemHelper.h" />
     <ClInclude Include="Superfetch.h" />
     <ClInclude Include="SuperfetchNative.h" />
   </ItemGroup>
