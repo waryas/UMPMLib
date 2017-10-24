@@ -148,6 +148,7 @@
     <ClCompile Include="Superfetch.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="GetWindowsVersion.h" />
     <ClInclude Include="PhysicalMemory.h" />
     <ClInclude Include="PMemHelper.h" />
     <ClInclude Include="Superfetch.h" />

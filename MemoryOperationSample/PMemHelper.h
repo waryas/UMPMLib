@@ -2,10 +2,10 @@
 #define _PMEM_HELPER_H
 #include <Windows.h>
 #include <stdint.h>
-#include <vector>
 #include <functional>
 #include "Superfetch.h"
 #include "PhysicalMemory.h"
+#include "GetWindowsVersion.h"
 
 class PMemHelper
 {
@@ -16,40 +16,69 @@ public:
 		// get system version
 
 		// win7
-		//EPNameOffset = 0x2E0;
-		//EPPidOffset = 0xcc;
-		//EPDirBaseOffset = 0x0028;
-		//EPBaseOffset = 0x270;
-		//EPLinkOffset = 0xcc;
-
+		auto windowsVersion = getVersion();
+		switch(windowsVersion) {
+		case WINDOWS7:
+			printf("Windows 7 detected!\n");
+			EPNameOffset = 0x2D8;
+			EPPidOffset = 0x180;
+			EPDirBaseOffset = 0x0028;
+			EPBaseOffset = 0x270;
+			EPLinkOffset = 0x188;
+			break;
+		case WINDOWS8:
+			printf("Windows 8 detected - Untested, if this bugs, please report on github!\n");
+			EPNameOffset = 0x438;
+			EPPidOffset = 0x2E0;
+			EPDirBaseOffset = 0x0028;
+			EPBaseOffset = 0x3B0;
+			EPLinkOffset = 0x2E8;
+			break;
+		case WINDOWS81:
+			printf("Windows 8.1 detected - Untested, if this bugs, please report on github!\n");
+			EPNameOffset = 0x438;
+			EPPidOffset = 0x2E0;
+			EPDirBaseOffset = 0x0028;
+			EPBaseOffset = 0x3B0;
+			EPLinkOffset = 0x2E8;
+			break;
 		// win10 1703
-		EPNameOffset = 0x450;
-		EPPidOffset = 0x02E0;
-		EPDirBaseOffset = 0x0028;
-		EPBaseOffset = 0x03C0;
-		EPLinkOffset = 0x02E8;
-		
+		case WINDOWS10:
+			printf("Windows 10 detected!\n");
+			EPNameOffset = 0x450;
+			EPPidOffset = 0x02E0;
+			EPDirBaseOffset = 0x0028;
+			EPBaseOffset = 0x03C0;
+			EPLinkOffset = 0x02E8;
+			break;
+		default:
+			printf("Unsupported OS detected, this probably won't work!\n");
+			EPNameOffset = 0x450;
+			EPPidOffset = 0x02E0;
+			EPDirBaseOffset = 0x0028;
+			EPBaseOffset = 0x03C0;
+			EPLinkOffset = 0x02E8;
+			break;
+		}
 		SFSetup();	
 		SFGetMemoryInfo(mMemInfo, mInfoCount);
 
 		mPMemHandle = OpenPhysicalMemory();
 
-		for (int i = 0; i < mInfoCount; i++)
-		{
-			uint64_t pointer = 0;
-			mMemInfo[i].Start -= 0x1000;
-			mMemInfo[i].End -= 0x1000;
-			if (MapPhysicalMemory(mPMemHandle, &mMemInfo[i].Start, &mMemInfo[i].Size, &pointer))
-				mpPointers.push_back(pointer);
-			else
-				printf("failed to map %d to %d \n", mMemInfo[i].Start, mMemInfo[i].End);
-		}		
+
+			//mMemInfo[i].Start = 0x1000;
+			//mMemInfo[i].End = 0x1000;
+			//mMemInfo[i].Size = 0x1000;
+		mMemInfo[mInfoCount - 1].End -= 0x1000;
+		mMemInfo[mInfoCount - 1].Size -= 0x1000;
+		uint8_t* startScan = 0;
+		if (!MapPhysicalMemory(mPMemHandle, (PDWORD64)&startScan, &mMemInfo[mInfoCount - 1].End, (PDWORD64)&ramImage))
+			printf("Mapping failed...\n");
 	}
 
 	~PMemHelper()
 	{
-		for(auto pointer: mpPointers)
-			UnmapPhysicalMemory((PDWORD64)pointer);
+		UnmapPhysicalMemory((PDWORD64)ramImage);
 	}
 
 	bool Read(uint64_t address, uint8_t* buffer, int size)
@@ -58,7 +87,7 @@ public:
 		{
 			if (mMemInfo[i].Start <= address && address + size <= mMemInfo[i].End)
 			{
-				memcpy(buffer, (void*)(mpPointers[i] + address - mMemInfo[i].Start), size);
+				memcpy(buffer, (void*)(ramImage + address), size);
 				return true;
 			}
 		}
@@ -71,7 +100,7 @@ public:
 		{
 			if (mMemInfo[i].Start <= address && address + size <= mMemInfo[i].End)
 			{
-				memcpy((void*)(mpPointers[i] + address - mMemInfo[i].Start), buffer, size);
+				memcpy((void*)(ramImage + address), buffer, size);
 				return true;
 			}
 		}
@@ -128,9 +157,10 @@ public:
 			{
 				if (!Read(peprocess + EPDirBaseOffset, (uint8_t*)&mKernelDir, sizeof(mKernelDir)))
 					return false;
-				printf("Kernel cr3: %d \n", mKernelDir);
-				if (peprocess == TranslateLinearAddress(mKernelDir, SFGetEProcess(4)))
+				if (peprocess == TranslateLinearAddress(mKernelDir, SFGetEProcess(4))) {
+					printf("Found System CR3\n");
 					return true;		
+				}
 			}
 			return false;
 		});
@@ -147,12 +177,19 @@ private:
 	uint64_t EPBaseOffset    = 0;
 	uint64_t EPLinkOffset    = 0;
 
-private:
+	uint8_t *ramImage = 0;
 	HANDLE mPMemHandle;
-	SFMemoryInfo mMemInfo[255];
+	SFMemoryInfo mMemInfo[32];
 	int mInfoCount = 0;
-	std::vector<uint64_t> mpPointers;
+	
 	uint64_t mKernelDir = 0;
+
+	bool isInRam(uint64_t address, uint32_t len) {
+		for (int j = 0; j < mInfoCount; j++)
+			if ((mMemInfo[j].Start <= address) && ((address + len) <= mMemInfo[j].End))
+				return true;
+		return false;
+	}
 
 	bool ScanPoolTag(char* tag_char, std::function<bool(uint64_t)> scan_callback)
 	{
@@ -163,11 +200,13 @@ private:
 			tag_char[3] << 24
 			);
 
-		uint8_t lpBuffer[0x1000] = { 0 };
+
 		for (auto i = 0ULL; i< mMemInfo[mInfoCount-1].End; i += 0x1000) {
-			if (!Read(i, lpBuffer, 0x1000))
+			if (!isInRam(i, 0x1000))
 				continue;
-			uint8_t* lpCursor = lpBuffer;
+			
+
+			uint8_t* lpCursor = ramImage+i;
 			uint32_t previousSize = 0;
 			while (true) {	
 				auto pPoolHeader = (PPOOL_HEADER)lpCursor;
@@ -183,10 +222,10 @@ private:
 				previousSize = blockSize;
 		
 				if (tag == pPoolHeader->PoolTag)
-					if (scan_callback(i + (uint64_t)lpCursor - (uint64_t)lpBuffer))
+					if (scan_callback((uint64_t)(lpCursor - ramImage)))
 						return true;
 				lpCursor += blockSize;
-				if ((lpCursor - lpBuffer) >= 0x1000)
+				if ((lpCursor - (ramImage+i)) >= 0x1000)
 					break;
 		
 			}
