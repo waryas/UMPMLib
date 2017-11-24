@@ -221,7 +221,7 @@ private:
 		
 				previousSize = blockSize;
 		
-				if (tag == pPoolHeader->PoolTag)
+				if (tag == pPoolHeader->PoolTag & 0x7FFFFFFF)
 					if (scan_callback((uint64_t)(lpCursor - ramImage)))
 						return true;
 				lpCursor += blockSize;
